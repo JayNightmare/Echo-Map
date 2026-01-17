@@ -1,0 +1,58 @@
+[
+  {
+    "id": "node-1",
+    "title": "Ocean Waves",
+    "latitude": 37.7749,
+    "longitude": -122.4194,
+    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
+  },
+  {
+    "id": "node-2",
+    "title": "Forest Ambience",
+    "latitude": 37.7849,
+    "longitude": -122.4094,
+    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3"
+  },
+  {
+    "id": "node-3",
+    "title": "City Sounds",
+    "latitude": 37.7649,
+    "longitude": -122.4294,
+    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3"
+  },
+  {
+    "id": "node-4",
+    "title": "Rain & Thunder",
+    "latitude": 37.7949,
+    "longitude": -122.4394,
+    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3"
+  },
+  {
+    "id": "node-5",
+    "title": "Mountain Wind",
+    "latitude": 37.7549,
+    "longitude": -122.3994,
+    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3"
+  },
+  {
+    "id": "node-6",
+    "title": "Jungle Chorus",
+    "latitude": 37.7749,
+    "longitude": -122.4494,
+    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3"
+  },
+  {
+    "id": "node-7",
+    "title": "Desert Night",
+    "latitude": 37.7849,
+    "longitude": -122.4394,
+    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3"
+  },
+  {
+    "id": "node-8",
+    "title": "River Flow",
+    "latitude": 37.7649,
+    "longitude": -122.4094,
+    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3"
+  }
+]

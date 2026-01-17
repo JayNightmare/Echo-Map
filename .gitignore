@@ -137,3 +137,42 @@ dist
 # Vite logs files
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# React Native / Expo
+.expo/
+.expo-shared/
+web-build/
+dist/
+
+# macOS
+.DS_Store
+
+# Android
+*.apk
+*.ap_
+*.aab
+*.dex
+*.class
+android/app/build/
+android/build/
+*.keystore
+!debug.keystore
+
+# iOS
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+*.xcuserstate
+*.xcworkspace/
+!default.xcworkspace
+*.xcscmblueprint
+*.xccheckout
+ios/Pods/
+ios/build/
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+*~

@@ -208,7 +208,7 @@ export default function App() {
   const playSonarSound = async () => {
     try {
       if (sonarSound) {
-        await sonarSound.replayAsync();
+        await sonarSound.playAsync();
         await sonarSound.setIsLoopingAsync(true);
       } else {
         // For now, we'll just use haptics for feedback

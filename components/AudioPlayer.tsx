@@ -127,7 +127,6 @@ const styles = StyleSheet.create({
   },
   controls: {
     flexDirection: 'row',
-    gap: 10,
     marginBottom: 20,
   },
   playButton: {
@@ -135,6 +134,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 30,
     paddingVertical: 15,
     borderRadius: 10,
+    marginRight: 10,
   },
   stopButton: {
     backgroundColor: '#f44336',

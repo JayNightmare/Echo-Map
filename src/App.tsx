@@ -6,7 +6,6 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { useEchoLocation } from "./hooks/useEchoLocation";
 import { useEchoNavigation } from "./hooks/useEchoNavigation";
-import { IdleScreen } from "./screens/IdleScreen";
 import { MapSelectionScreen } from "./screens/MapSelectionScreen";
 import { NavigationScreen } from "./screens/NavigationScreen";
 import { ArrivalScreen } from "./screens/ArrivalScreen";
@@ -22,7 +21,8 @@ function AppContent() {
     const { theme } = useSettings();
 
     // UI State
-    const [isSelectingLocation, setIsSelectingLocation] = useState(false);
+    // Directly start in selection mode
+    const [isSelectingLocation, setIsSelectingLocation] = useState(true);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [isStarted, setIsStarted] = useState(false);
 
@@ -32,6 +32,9 @@ function AppContent() {
         startRoute,
         proceedToNextTarget,
         clearNavigation: hookClearNavigation,
+        setRoute,
+        updateRoute,
+        updateNode,
     } = useEchoNavigation({
         userLocation,
         isStarted,
@@ -48,7 +51,7 @@ function AppContent() {
     const handleClearNavigation = () => {
         hookClearNavigation();
         setIsStarted(false);
-        setIsSelectingLocation(false);
+        setIsSelectingLocation(true); // Go back to selection map
     };
 
     // Render Logic
@@ -77,6 +80,9 @@ function AppContent() {
                     onStartNavigation={handleStartNavigation}
                     onCancel={handleClearNavigation}
                     onOpenSettings={() => setIsSettingsOpen(true)}
+                    onSetRoute={setRoute}
+                    onUpdateRoute={updateRoute}
+                    onUpdateNode={updateNode}
                 />
             );
         }
@@ -105,10 +111,19 @@ function AppContent() {
             }
         }
 
+        // Fallback for unexpected state
         return (
-            <IdleScreen
-                onStart={() => setIsSelectingLocation(true)}
+            <MapSelectionScreen
+                userLocation={userLocation}
+                audioNodes={audioNodesData}
+                activeRoute={navState.activeRoute}
+                onAddToRoute={addToRoute}
+                onStartNavigation={handleStartNavigation}
+                onCancel={handleClearNavigation}
                 onOpenSettings={() => setIsSettingsOpen(true)}
+                onSetRoute={setRoute}
+                onUpdateRoute={updateRoute}
+                onUpdateNode={updateNode}
             />
         );
     };
@@ -124,6 +139,7 @@ function AppContent() {
                         { backgroundColor: paperTheme.colors.background },
                     ]}
                 >
+                    <StatusBar style={theme === "dark" ? "light" : "dark"} />
                     {renderContent()}
                 </View>
             </SafeAreaProvider>
@@ -132,15 +148,6 @@ function AppContent() {
 }
 
 export default function App() {
-    // Lift state up or use a ref if needed, but for now we rely on the context to trigger the clear
-    // However, the context needs to call a function here to clear *navigation* state.
-    // Since useEchoNavigation is inside AppContent, we need a way to reach it.
-    // For simplicity in this refactor step, we can pass a dummy or implement a ref approach later.
-    // But wait! SettingsProvider needs onClearData prop.
-    // We should move the state holding component inside the provider.
-
-    // Actually, let's keep it simple. We can make a wrapper component that holds the provider.
-
     return <AppWrapper />;
 }
 
@@ -168,7 +175,8 @@ function AppContentWithClearTrigger({
     const { theme } = useSettings();
 
     // UI State
-    const [isSelectingLocation, setIsSelectingLocation] = useState(false);
+    // Directly start in selection mode
+    const [isSelectingLocation, setIsSelectingLocation] = useState(true);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [isStarted, setIsStarted] = useState(false);
 
@@ -178,6 +186,9 @@ function AppContentWithClearTrigger({
         startRoute,
         proceedToNextTarget,
         clearNavigation: hookClearNavigation,
+        setRoute,
+        updateRoute,
+        updateNode,
     } = useEchoNavigation({
         userLocation,
         isStarted,
@@ -188,7 +199,7 @@ function AppContentWithClearTrigger({
         if (clearTrigger > 0) {
             hookClearNavigation();
             setIsStarted(false);
-            setIsSelectingLocation(false);
+            setIsSelectingLocation(true); // Go back to selection map
             // also close settings if open? optional.
             setIsSettingsOpen(false);
         }
@@ -205,7 +216,7 @@ function AppContentWithClearTrigger({
     const handleClearNavigation = () => {
         hookClearNavigation();
         setIsStarted(false);
-        setIsSelectingLocation(false);
+        setIsSelectingLocation(true); // Go back to selection map
     };
 
     // Render Logic
@@ -234,6 +245,9 @@ function AppContentWithClearTrigger({
                     onStartNavigation={handleStartNavigation}
                     onCancel={handleClearNavigation}
                     onOpenSettings={() => setIsSettingsOpen(true)}
+                    onSetRoute={setRoute}
+                    onUpdateRoute={updateRoute}
+                    onUpdateNode={updateNode}
                 />
             );
         }
@@ -262,10 +276,19 @@ function AppContentWithClearTrigger({
             }
         }
 
+        // Fallback for unexpected state
         return (
-            <IdleScreen
-                onStart={() => setIsSelectingLocation(true)}
+            <MapSelectionScreen
+                userLocation={userLocation}
+                audioNodes={audioNodesData}
+                activeRoute={navState.activeRoute}
+                onAddToRoute={addToRoute}
+                onStartNavigation={handleStartNavigation}
+                onCancel={handleClearNavigation}
                 onOpenSettings={() => setIsSettingsOpen(true)}
+                onSetRoute={setRoute}
+                onUpdateRoute={updateRoute}
+                onUpdateNode={updateNode}
             />
         );
     };

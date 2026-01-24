@@ -214,6 +214,39 @@ export const useEchoNavigation = ({
         });
     };
 
+    const setRoute = (route: AudioNode[]) => {
+        setState((prev) => ({
+            ...prev,
+            activeRoute: route,
+            activeTarget: null,
+            currentTargetIndex: 0,
+            distance: null,
+            bearing: null,
+            headingDelta: null,
+            isArrived: false,
+        }));
+    };
+
+    const updateRoute = (route: AudioNode[]) => {
+        setState((prev) => ({
+            ...prev,
+            activeRoute: route,
+        }));
+    };
+
+    const updateNode = (index: number, node: Partial<AudioNode>) => {
+        setState((prev) => {
+            const newRoute = [...prev.activeRoute];
+            if (newRoute[index]) {
+                newRoute[index] = { ...newRoute[index], ...node };
+            }
+            return {
+                ...prev,
+                activeRoute: newRoute,
+            };
+        });
+    };
+
     return {
         state,
         isOnTrack,
@@ -221,5 +254,8 @@ export const useEchoNavigation = ({
         startRoute,
         proceedToNextTarget,
         clearNavigation,
+        setRoute,
+        updateRoute,
+        updateNode,
     };
 };

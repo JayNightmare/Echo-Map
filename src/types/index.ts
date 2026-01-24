@@ -30,4 +30,14 @@ export interface MapSelectionScreenProps {
     onStartNavigation: () => void;
     onCancel: () => void;
     onOpenSettings: () => void;
+    onSetRoute: (route: AudioNode[]) => void;
+    onUpdateRoute: (route: AudioNode[]) => void;
+    onUpdateNode: (index: number, node: Partial<AudioNode>) => void;
+}
+
+export interface SavedRoute {
+    id: string;
+    name: string;
+    nodes: AudioNode[];
+    createdAt: number;
 }

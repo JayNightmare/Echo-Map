@@ -10,7 +10,7 @@ import { MapSelectionScreen } from "./screens/MapSelectionScreen";
 import { NavigationScreen } from "./screens/NavigationScreen";
 import { ArrivalScreen } from "./screens/ArrivalScreen";
 
-import audioNodesData from "./data/audioNodes.json";
+// import audioNodesData from "./data/audioNodes.json";
 
 import { SettingsProvider, useSettings } from "./context/SettingsContext";
 import { SettingsScreen } from "./screens/SettingsScreen";
@@ -74,7 +74,6 @@ function AppContent() {
             return (
                 <MapSelectionScreen
                     userLocation={userLocation}
-                    audioNodes={audioNodesData}
                     activeRoute={navState.activeRoute}
                     onAddToRoute={addToRoute}
                     onStartNavigation={handleStartNavigation}
@@ -115,7 +114,6 @@ function AppContent() {
         return (
             <MapSelectionScreen
                 userLocation={userLocation}
-                audioNodes={audioNodesData}
                 activeRoute={navState.activeRoute}
                 onAddToRoute={addToRoute}
                 onStartNavigation={handleStartNavigation}
@@ -239,7 +237,6 @@ function AppContentWithClearTrigger({
             return (
                 <MapSelectionScreen
                     userLocation={userLocation}
-                    audioNodes={audioNodesData}
                     activeRoute={navState.activeRoute}
                     onAddToRoute={addToRoute}
                     onStartNavigation={handleStartNavigation}
@@ -280,7 +277,6 @@ function AppContentWithClearTrigger({
         return (
             <MapSelectionScreen
                 userLocation={userLocation}
-                audioNodes={audioNodesData}
                 activeRoute={navState.activeRoute}
                 onAddToRoute={addToRoute}
                 onStartNavigation={handleStartNavigation}

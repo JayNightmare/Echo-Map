@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { AudioNode } from "../types";
 import { AudioPlayer } from "../components/AudioPlayer";
+import { useHaptics } from "../hooks/useHaptics";
 
 interface ArrivalScreenProps {
     target: AudioNode;
@@ -15,6 +16,7 @@ export const ArrivalScreen: React.FC<ArrivalScreenProps> = ({
     onNext,
     onEnd,
 }) => {
+    const { selection, impactMedium } = useHaptics();
     return (
         <View style={styles.container}>
             <StatusBar style="light" />
@@ -27,7 +29,10 @@ export const ArrivalScreen: React.FC<ArrivalScreenProps> = ({
                 ) : (
                     <TouchableOpacity
                         style={styles.nextButton}
-                        onPress={onNext}
+                        onPress={() => {
+                            selection();
+                            onNext();
+                        }}
                     >
                         <Text style={styles.nextButtonText}>
                             Proceed to Next Target
@@ -35,7 +40,13 @@ export const ArrivalScreen: React.FC<ArrivalScreenProps> = ({
                     </TouchableOpacity>
                 )}
 
-                <TouchableOpacity style={styles.stopButton} onPress={onEnd}>
+                <TouchableOpacity
+                    style={styles.stopButton}
+                    onPress={() => {
+                        impactMedium();
+                        onEnd();
+                    }}
+                >
                     <Text style={styles.stopButtonText}>End Route</Text>
                 </TouchableOpacity>
             </View>

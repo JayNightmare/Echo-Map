@@ -24,7 +24,6 @@ export interface NavigationState {
 
 export interface MapSelectionScreenProps {
     userLocation: UserLocation;
-    audioNodes: AudioNode[];
     activeRoute: AudioNode[];
     onAddToRoute: (node: AudioNode) => void;
     onStartNavigation: () => void;

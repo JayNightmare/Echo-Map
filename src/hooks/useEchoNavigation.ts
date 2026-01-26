@@ -134,6 +134,7 @@ export const useEchoNavigation = ({
         const { interval, intensity } = getHapticParams(state.distance);
 
         const triggerHaptic = () => {
+            if (!hapticsEnabled) return;
             if (intensity === "light")
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
             else if (intensity === "medium")

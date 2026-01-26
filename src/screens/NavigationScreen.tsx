@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { AudioNode } from "../types";
 import { NavigationOrb } from "../components/NavigationOrb";
+import { useHaptics } from "../hooks/useHaptics";
 
 interface NavigationScreenProps {
     target: AudioNode;
@@ -19,6 +20,7 @@ export const NavigationScreen: React.FC<NavigationScreenProps> = ({
     routeTotal,
     onCancel,
 }) => {
+    const { impactMedium } = useHaptics();
     return (
         <View style={styles.container}>
             <StatusBar style="light" />
@@ -31,7 +33,13 @@ export const NavigationScreen: React.FC<NavigationScreenProps> = ({
                 <Text style={styles.targetTitle}>{target.title}</Text>
             </View>
 
-            <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
+            <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={() => {
+                    impactMedium();
+                    onCancel();
+                }}
+            >
                 <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
         </View>

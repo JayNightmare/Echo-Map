@@ -8,6 +8,7 @@ import {
     StatusBar,
     FlatList,
     Dimensions,
+    Alert,
 } from "react-native";
 import MapView, { Marker, PROVIDER_GOOGLE, Callout } from "react-native-maps";
 import MapViewDirections from "react-native-maps-directions";
@@ -23,6 +24,7 @@ import {
     Dialog,
     TextInput,
     FAB,
+    Icon,
 } from "react-native-paper";
 import { GOOGLE_MAPS_API_KEY } from "../config/config";
 import {
@@ -32,12 +34,43 @@ import {
     SavedRoute,
 } from "../types";
 import { useRouteHistory } from "../hooks/useRouteHistory";
+import Animated, {
+    useSharedValue,
+    useAnimatedStyle,
+    withSpring,
+    withTiming,
+    interpolate,
+    Extrapolation,
+} from "react-native-reanimated";
+import { useHaptics } from "../hooks/useHaptics";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
+const getDistanceFromLatLonInKm = (
+    lat1: number,
+    lon1: number,
+    lat2: number,
+    lon2: number,
+) => {
+    const R = 6371; // Radius of the earth in km
+    const dLat = deg2rad(lat2 - lat1);
+    const dLon = deg2rad(lon2 - lon1);
+    const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(deg2rad(lat1)) *
+            Math.cos(deg2rad(lat2)) *
+            Math.sin(dLon / 2) *
+            Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c; // Distance in km
+};
+
+const deg2rad = (deg: number) => {
+    return deg * (Math.PI / 180);
+};
+
 export const MapSelectionScreen: React.FC<MapSelectionScreenProps> = ({
     userLocation,
-    audioNodes,
     activeRoute,
     onAddToRoute,
     onStartNavigation,
@@ -49,15 +82,19 @@ export const MapSelectionScreen: React.FC<MapSelectionScreenProps> = ({
 }) => {
     const { mapStyle } = useSettings();
     const { history, saveRoute, deleteRoute, isLoading } = useRouteHistory();
+    const { selection, impactMedium, notificationSuccess } = useHaptics();
 
     // State
     const [temporaryPin, setTemporaryPin] = useState<AudioNode | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
     const [isSearching, setIsSearching] = useState(false);
+    const [searchResults, setSearchResults] = useState<any[]>([]);
 
     // History & Editing State
     const [isHistoryVisible, setIsHistoryVisible] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const menuAnimation = useSharedValue(0);
 
     // Renaming
     const [renameDialogVisible, setRenameDialogVisible] = useState(false);
@@ -66,8 +103,80 @@ export const MapSelectionScreen: React.FC<MapSelectionScreenProps> = ({
 
     const mapRef = useRef<MapView>(null);
 
+    const toggleMenu = () => {
+        const isOpen = !isMenuOpen;
+        setIsMenuOpen(isOpen);
+        menuAnimation.value = withSpring(isOpen ? 1 : 0, {
+            stiffness: 1000,
+        });
+        selection();
+    };
+
+    const menuIconStyle = useAnimatedStyle(() => {
+        const rotate = interpolate(
+            menuAnimation.value,
+            [0, 1],
+            [0, 90],
+            Extrapolation.CLAMP,
+        );
+        const opacity = interpolate(
+            menuAnimation.value,
+            [0, 1],
+            [1, 0],
+            Extrapolation.CLAMP,
+        );
+        return {
+            transform: [{ rotate: `${rotate}deg` }],
+            opacity,
+        };
+    });
+
+    const closeIconStyle = useAnimatedStyle(() => {
+        const rotate = interpolate(
+            menuAnimation.value,
+            [0, 1],
+            [-90, 0],
+            Extrapolation.CLAMP,
+        );
+        const opacity = interpolate(
+            menuAnimation.value,
+            [0, 1],
+            [0, 1],
+            Extrapolation.CLAMP,
+        );
+        return {
+            transform: [{ rotate: `${rotate}deg` }],
+            opacity,
+            position: "absolute",
+        };
+    });
+
+    const menuDropdownStyle = useAnimatedStyle(() => {
+        const translateY = interpolate(
+            menuAnimation.value,
+            [0, 1],
+            [-20, 0],
+            Extrapolation.CLAMP,
+        );
+        const opacity = interpolate(
+            menuAnimation.value,
+            [0, 1],
+            [0, 1],
+            Extrapolation.CLAMP,
+        );
+
+        return {
+            opacity,
+            transform: [{ translateY }],
+            // Hide pointer events when closed handled by conditional rendering or pointerEvents prop
+        };
+    });
+
     const handleSearch = async () => {
-        if (!searchQuery.trim()) return;
+        if (!searchQuery.trim()) {
+            setSearchResults([]);
+            return;
+        }
 
         setIsSearching(true);
         try {
@@ -83,6 +192,16 @@ export const MapSelectionScreen: React.FC<MapSelectionScreenProps> = ({
                     },
                     body: JSON.stringify({
                         textQuery: searchQuery,
+                        maxResultCount: 5, // Limit results
+                        locationBias: {
+                            circle: {
+                                center: {
+                                    latitude: userLocation.latitude,
+                                    longitude: userLocation.longitude,
+                                },
+                                radius: 50000, // 50km bias
+                            },
+                        },
                     }),
                 },
             );
@@ -90,39 +209,50 @@ export const MapSelectionScreen: React.FC<MapSelectionScreenProps> = ({
             const data = await response.json();
 
             if (data.places && data.places.length > 0) {
-                const place = data.places[0];
-                const { latitude, longitude } = place.location;
-
-                mapRef.current?.animateToRegion(
-                    {
-                        latitude,
-                        longitude,
-                        latitudeDelta: 0.01,
-                        longitudeDelta: 0.01,
-                    },
-                    1000,
-                );
-
-                setTemporaryPin({
-                    id: `search-${place.id}`,
-                    title: place.displayName.text,
-                    latitude,
-                    longitude,
-                    audioUrl: "",
-                });
+                setSearchResults(data.places);
             } else {
+                setSearchResults([]);
                 console.warn("No places found");
             }
         } catch (error) {
             console.error("Search error:", error);
+            setSearchResults([]);
         } finally {
             setIsSearching(false);
         }
     };
 
+    const handleSelectResult = (place: any) => {
+        selection();
+        const { latitude, longitude } = place.location;
+
+        const newPin: AudioNode = {
+            id: `search-${place.id}`,
+            title: place.displayName.text,
+            latitude,
+            longitude,
+            audioUrl: "",
+        };
+
+        // Center map on selection
+        mapRef.current?.animateToRegion(
+            {
+                latitude,
+                longitude,
+                latitudeDelta: 0.01,
+                longitudeDelta: 0.01,
+            },
+            1000,
+        );
+
+        onAddToRoute(newPin);
+        setSearchResults([]); // Clear results after selection
+        setSearchQuery(""); // Optional: clear search query
+    };
+
     const handleMapLongPress = (e: any) => {
+        impactMedium();
         const { coordinate } = e.nativeEvent;
-        // ...Existing Logic
         const newPin: AudioNode = {
             id: `temp-${Date.now()}`,
             title: "New Point",
@@ -135,8 +265,31 @@ export const MapSelectionScreen: React.FC<MapSelectionScreenProps> = ({
     };
 
     const handleAddToRoute = (node: AudioNode) => {
+        notificationSuccess();
         onAddToRoute(node);
         setTemporaryPin(null);
+    };
+
+    // --- Deleting Alert Logic ---
+    const alrtDelete = (id: string) => {
+        Alert.alert(
+            "Delete Point",
+            "Are you sure you want to delete this point?",
+            [
+                {
+                    text: "Cancel",
+                    onPress: () => console.log("Cancel Pressed"),
+                    style: "cancel",
+                },
+                {
+                    text: "Delete",
+                    onPress: () => {
+                        impactMedium();
+                        deleteRoute(id);
+                    },
+                },
+            ],
+        );
     };
 
     // --- Editing Logic ---
@@ -152,12 +305,14 @@ export const MapSelectionScreen: React.FC<MapSelectionScreenProps> = ({
         newRoute.splice(toIndex, 0, movedNode);
 
         onUpdateRoute(newRoute);
+        selection();
     };
 
     const deleteNode = (index: number) => {
         const newRoute = [...activeRoute];
         newRoute.splice(index, 1);
         onUpdateRoute(newRoute);
+        impactMedium();
     };
 
     const startRenaming = (index: number) => {
@@ -169,6 +324,7 @@ export const MapSelectionScreen: React.FC<MapSelectionScreenProps> = ({
     const confirmRename = () => {
         if (renamingIndex !== null) {
             onUpdateNode(renamingIndex, { title: newName });
+            selection();
         }
         setRenameDialogVisible(false);
         setRenamingIndex(null);
@@ -177,24 +333,80 @@ export const MapSelectionScreen: React.FC<MapSelectionScreenProps> = ({
 
     const handleSaveRoute = async () => {
         await saveRoute(activeRoute);
+        notificationSuccess();
         setIsHistoryVisible(true);
     };
 
     const loadRoute = (route: SavedRoute) => {
+        selection();
         onSetRoute(route.nodes);
         setIsHistoryVisible(false);
     };
 
-    const handleClear = () => {
-        onCancel();
-        setSearchQuery("");
-        setTemporaryPin(null);
-    };
-
     // --- Render Helpers ---
 
+    const renderSearchResultItem = ({ item }: { item: any }) => {
+        const distance = getDistanceFromLatLonInKm(
+            userLocation.latitude,
+            userLocation.longitude,
+            item.location.latitude,
+            item.location.longitude,
+        ).toFixed(1);
+
+        const textColor = mapStyle === "dark" ? "#fff" : "#000";
+        const subTextColor = mapStyle === "dark" ? "#ccc" : "#666";
+
+        return (
+            <TouchableOpacity
+                style={styles.searchResultItem}
+                onPress={() => handleSelectResult(item)}
+            >
+                <View style={styles.searchResultLeft}>
+                    <View style={styles.pinContainer}>
+                        <IconButton
+                            icon="map-marker"
+                            size={20}
+                            iconColor={
+                                mapStyle === "dark" ? "#4CAF50" : "#2E7D32"
+                            }
+                            style={{ margin: 0 }}
+                        />
+                        <Text
+                            style={[
+                                styles.distanceText,
+                                { color: subTextColor },
+                            ]}
+                        >
+                            {distance} km
+                        </Text>
+                    </View>
+                    <View style={styles.textContainer}>
+                        <Text
+                            style={[styles.resultTitle, { color: textColor }]}
+                        >
+                            {item.displayName.text}
+                        </Text>
+                        <Text
+                            style={[
+                                styles.resultAddress,
+                                { color: subTextColor },
+                            ]}
+                        >
+                            {item.formattedAddress}
+                        </Text>
+                    </View>
+                </View>
+                <IconButton
+                    icon="plus"
+                    size={24}
+                    iconColor={mapStyle === "dark" ? "#4CAF50" : "#2E7D32"}
+                    onPress={() => handleSelectResult(item)}
+                />
+            </TouchableOpacity>
+        );
+    };
+
     const renderRouteItem = (node: AudioNode, index: number) => {
-        // ... (Item rendering logic same as before, simplified for diff brevity if using replace, but full here for write)
         if (isEditing) {
             return (
                 <View
@@ -298,25 +510,14 @@ export const MapSelectionScreen: React.FC<MapSelectionScreenProps> = ({
             <StatusBar />
 
             <View style={styles.topBar}>
-                {/* Search Bar Row with Clear Button */}
+                {/* Search Bar Row */}
                 <View style={styles.searchRow}>
-                    {/* Clear Button (active if route has items or search has text) */}
-                    {(activeRoute.length > 0 || searchQuery.length > 0) && (
-                        <IconButton
-                            icon="trash-can-outline"
-                            size={24}
-                            iconColor="#ff5252"
-                            containerColor={
-                                mapStyle === "dark" ? "#333" : "#fff"
-                            }
-                            onPress={handleClear}
-                            style={styles.clearBtn}
-                        />
-                    )}
-
                     <Searchbar
                         placeholder="Search for a place"
-                        onChangeText={setSearchQuery}
+                        onChangeText={(text) => {
+                            setSearchQuery(text);
+                            if (!text) setSearchResults([]); // Clear results on empty text
+                        }}
                         value={searchQuery}
                         onSubmitEditing={handleSearch}
                         loading={isSearching}
@@ -336,24 +537,117 @@ export const MapSelectionScreen: React.FC<MapSelectionScreenProps> = ({
                         }
                     />
 
-                    <IconButton
-                        icon="history"
-                        mode="contained"
-                        containerColor={mapStyle === "dark" ? "#333" : "#fff"}
-                        iconColor={mapStyle === "dark" ? "#fff" : "#000"}
-                        size={24}
-                        onPress={() => setIsHistoryVisible(true)}
-                        style={{ marginLeft: 5 }}
-                    />
-                    <IconButton
-                        icon="cog"
-                        mode="contained"
-                        containerColor={mapStyle === "dark" ? "#333" : "#fff"}
-                        iconColor={mapStyle === "dark" ? "#fff" : "#000"}
-                        size={24}
-                        onPress={onOpenSettings}
-                    />
+                    <View style={{ width: 10 }} />
+                    <View style={{ zIndex: 200 }}>
+                        <View
+                            style={{
+                                width: 50,
+                                height: 50,
+                                justifyContent: "center",
+                                alignItems: "center",
+                                marginLeft: 5,
+                            }}
+                        >
+                            {/* Menu Icon (fades out) */}
+                            <Animated.View
+                                style={menuIconStyle}
+                                pointerEvents={isMenuOpen ? "none" : "auto"}
+                            >
+                                <IconButton
+                                    icon="menu"
+                                    mode="contained"
+                                    containerColor={
+                                        mapStyle === "dark" ? "#333" : "#fff"
+                                    }
+                                    iconColor={
+                                        mapStyle === "dark" ? "#fff" : "#000"
+                                    }
+                                    size={32}
+                                    onPress={toggleMenu}
+                                    style={{ margin: 0 }}
+                                />
+                            </Animated.View>
+
+                            {/* Close Icon (fades in) */}
+                            <Animated.View
+                                style={closeIconStyle}
+                                pointerEvents={isMenuOpen ? "auto" : "none"}
+                            >
+                                <IconButton
+                                    icon="close"
+                                    mode="contained"
+                                    containerColor={
+                                        mapStyle === "dark" ? "#333" : "#fff"
+                                    }
+                                    iconColor={
+                                        mapStyle === "dark" ? "#fff" : "#000"
+                                    }
+                                    size={32}
+                                    onPress={toggleMenu}
+                                    style={{ margin: 0 }}
+                                />
+                            </Animated.View>
+                        </View>
+
+                        {/* Dropdown Menu */}
+                        <Animated.View
+                            style={[
+                                styles.menuDropdown,
+                                {
+                                    backgroundColor:
+                                        mapStyle === "dark" ? "#333" : "#fff",
+                                },
+                                menuDropdownStyle,
+                            ]}
+                            pointerEvents={isMenuOpen ? "auto" : "none"}
+                        >
+                            <IconButton
+                                icon="history"
+                                iconColor={
+                                    mapStyle === "dark" ? "#fff" : "#000"
+                                }
+                                size={24}
+                                onPress={() => {
+                                    selection();
+                                    toggleMenu();
+                                    setIsHistoryVisible(true);
+                                }}
+                            />
+                            <IconButton
+                                icon="cog"
+                                iconColor={
+                                    mapStyle === "dark" ? "#fff" : "#000"
+                                }
+                                size={24}
+                                onPress={() => {
+                                    selection();
+                                    toggleMenu();
+                                    onOpenSettings();
+                                }}
+                            />
+                        </Animated.View>
+                    </View>
                 </View>
+
+                {/* Search Results List */}
+                {searchResults.length > 0 && (
+                    <View
+                        style={[
+                            styles.searchResultsContainer,
+                            {
+                                backgroundColor:
+                                    mapStyle === "dark" ? "#333" : "#fff",
+                            },
+                        ]}
+                    >
+                        <FlatList
+                            data={searchResults}
+                            keyExtractor={(item) => item.id}
+                            renderItem={renderSearchResultItem}
+                            style={{ maxHeight: 300 }}
+                        />
+                    </View>
+                )}
             </View>
 
             <MapView
@@ -372,30 +666,6 @@ export const MapSelectionScreen: React.FC<MapSelectionScreenProps> = ({
                 showsMyLocationButton
                 onLongPress={handleMapLongPress}
             >
-                {/* ... (Same markers logic) ... */}
-                {audioNodes.map((node) => (
-                    <Marker
-                        key={node.id}
-                        coordinate={{
-                            latitude: node.latitude,
-                            longitude: node.longitude,
-                        }}
-                        title={node.title}
-                        pinColor="teal"
-                    >
-                        <Callout onPress={() => handleAddToRoute(node)}>
-                            <View style={styles.callout}>
-                                <Text style={styles.calloutTitle}>
-                                    {node.title}
-                                </Text>
-                                <Text style={styles.calloutBtn}>
-                                    + Add to Route
-                                </Text>
-                            </View>
-                        </Callout>
-                    </Marker>
-                ))}
-
                 {activeRoute.map((node, index) => (
                     <Marker
                         key={`route-${node.id}-${index}`}
@@ -458,9 +728,15 @@ export const MapSelectionScreen: React.FC<MapSelectionScreenProps> = ({
             {activeRoute.length > 0 && (
                 <FAB
                     icon="content-save"
-                    style={styles.fab}
+                    style={[
+                        styles.fab,
+                        {
+                            borderRadius: 999,
+                            backgroundColor: "#4CAF50",
+                            bottom: 175,
+                        },
+                    ]}
                     onPress={handleSaveRoute}
-                    variant="primary"
                     color="#fff"
                 />
             )}
@@ -471,7 +747,7 @@ export const MapSelectionScreen: React.FC<MapSelectionScreenProps> = ({
                     {
                         backgroundColor: mapStyle === "dark" ? "#222" : "#fff",
                         height: isEditing ? "50%" : "auto",
-                        maxHeight: isEditing ? "50%" : 250,
+                        maxHeight: isEditing ? "50%" : "100%",
                     },
                 ]}
             >
@@ -496,7 +772,10 @@ export const MapSelectionScreen: React.FC<MapSelectionScreenProps> = ({
                     </Text>
                     <View style={{ flexDirection: "row" }}>
                         <TouchableOpacity
-                            onPress={() => setIsEditing(!isEditing)}
+                            onPress={() => {
+                                selection();
+                                setIsEditing(!isEditing);
+                            }}
                         >
                             <Text
                                 style={{
@@ -511,7 +790,12 @@ export const MapSelectionScreen: React.FC<MapSelectionScreenProps> = ({
                 </View>
 
                 {isEditing ? (
-                    <ScrollView style={styles.routeListVertical}>
+                    <ScrollView
+                        style={
+                            (styles.routeListVertical,
+                            { backgroundColor: "transparent" })
+                        }
+                    >
                         {activeRoute.map((node, i) => renderRouteItem(node, i))}
                     </ScrollView>
                 ) : (
@@ -520,21 +804,21 @@ export const MapSelectionScreen: React.FC<MapSelectionScreenProps> = ({
                     </ScrollView>
                 )}
 
-                <View style={styles.selectionButtons}>
-                    {/* "Clear" was removed from bottom, now we just have Go */}
-
-                    <TouchableOpacity
-                        style={[
-                            styles.goButton,
-                            { flex: 1 },
-                            activeRoute.length === 0 && styles.disabledBtn,
-                        ]}
-                        onPress={onStartNavigation}
-                        disabled={activeRoute.length === 0}
-                    >
-                        <Text style={styles.goButtonText}>GO ▶</Text>
-                    </TouchableOpacity>
-                </View>
+                {isEditing ? null : (
+                    <View style={styles.selectionButtons}>
+                        <TouchableOpacity
+                            style={[
+                                styles.goButton,
+                                { flex: 1 },
+                                activeRoute.length === 0 && styles.disabledBtn,
+                            ]}
+                            onPress={onStartNavigation}
+                            disabled={activeRoute.length === 0}
+                        >
+                            <Text style={styles.goButtonText}>GO</Text>
+                        </TouchableOpacity>
+                    </View>
+                )}
             </View>
 
             {/* History Modal */}
@@ -547,6 +831,14 @@ export const MapSelectionScreen: React.FC<MapSelectionScreenProps> = ({
                         {
                             backgroundColor:
                                 mapStyle === "dark" ? "#333" : "#fff",
+                        },
+                        {
+                            // height: "45%",
+                            maxHeight: "100%",
+                        },
+                        {
+                            display: "flex",
+                            justifyContent: "space-between",
                         },
                     ]}
                 >
@@ -578,7 +870,7 @@ export const MapSelectionScreen: React.FC<MapSelectionScreenProps> = ({
                         <FlatList
                             data={history}
                             keyExtractor={(item) => item.id}
-                            style={{ maxHeight: SCREEN_HEIGHT * 0.4 }} // Fix layout issue by limiting height
+                            style={{ height: 200 }}
                             renderItem={({ item }) => (
                                 <List.Item
                                     title={item.name}
@@ -611,23 +903,40 @@ export const MapSelectionScreen: React.FC<MapSelectionScreenProps> = ({
                                             style={{
                                                 flexDirection: "row",
                                                 alignItems: "center",
+                                                maxWidth: "100%",
+                                                width: 100,
                                             }}
                                         >
-                                            <IconButton
-                                                icon="delete"
-                                                size={20}
-                                                iconColor="#f44336"
-                                                onPress={() =>
-                                                    deleteRoute(item.id)
-                                                }
-                                            />
                                             <Button
                                                 mode="contained"
                                                 onPress={() => loadRoute(item)}
-                                                style={{ marginLeft: 5 }}
+                                                style={{ marginLeft: 10 }}
+                                                buttonColor={
+                                                    mapStyle === "dark"
+                                                        ? "#000"
+                                                        : "#fff"
+                                                }
                                             >
-                                                Load
+                                                <List.Icon
+                                                    icon="map-marker-path"
+                                                    color={
+                                                        mapStyle === "dark"
+                                                            ? "#fff"
+                                                            : "#000"
+                                                    }
+                                                />
                                             </Button>
+                                            <IconButton
+                                                icon="delete"
+                                                size={20}
+                                                style={{
+                                                    marginLeft: 10,
+                                                }}
+                                                iconColor="#f44336"
+                                                onPress={() =>
+                                                    alrtDelete(item.id)
+                                                }
+                                            />
                                         </View>
                                     )}
                                 />
@@ -637,7 +946,14 @@ export const MapSelectionScreen: React.FC<MapSelectionScreenProps> = ({
                     <Button
                         mode="text"
                         onPress={() => setIsHistoryVisible(false)}
-                        style={{ marginTop: 10 }}
+                        textColor="#ccccccff"
+                        style={{
+                            marginTop: 10,
+                            borderColor: "#cccccc4c",
+                            borderWidth: 1,
+                            borderRadius: 5,
+                            backgroundColor: "transparent",
+                        }}
                     >
                         Close
                     </Button>
@@ -700,11 +1016,6 @@ const styles = StyleSheet.create({
     searchBar: {
         flex: 1,
         borderRadius: 25,
-        elevation: 3,
-    },
-    clearBtn: {
-        marginRight: 5,
-        backgroundColor: "#fff",
         elevation: 3,
     },
     selectionPanel: {
@@ -779,5 +1090,63 @@ const styles = StyleSheet.create({
         right: 20,
         bottom: 220, // positioned above the panel (approx 200px height)
         backgroundColor: "#2196F3",
+    },
+    searchResultsContainer: {
+        marginTop: 5,
+        borderRadius: 10,
+        elevation: 4,
+        overflow: "hidden", // Ensure border radius clips content
+    },
+    searchResultItem: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        paddingVertical: 10,
+        paddingHorizontal: 5,
+        borderBottomWidth: 0.5,
+        borderBottomColor: "rgba(100,100,100,0.2)",
+    },
+    searchResultLeft: {
+        flex: 1,
+        flexDirection: "row",
+        alignItems: "center",
+    },
+    pinContainer: {
+        alignItems: "center",
+        justifyContent: "center",
+        marginRight: 10,
+        minWidth: 40,
+    },
+    distanceText: {
+        fontSize: 10,
+        marginTop: -5,
+    },
+    textContainer: {
+        flex: 1,
+    },
+    resultTitle: {
+        fontWeight: "bold",
+        fontSize: 15,
+        marginBottom: 2,
+    },
+    resultAddress: {
+        fontStyle: "italic",
+        fontSize: 12,
+    },
+    menuDropdown: {
+        position: "absolute",
+        top: 60,
+        right: 0,
+        borderRadius: 25,
+        paddingVertical: 5,
+        alignItems: "center",
+        zIndex: 199,
+        elevation: 5,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.84,
+        maxHeight: 150,
+        width: 50,
     },
 });

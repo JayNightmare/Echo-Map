@@ -12,6 +12,7 @@ import {
 import { useSettings } from "../context/SettingsContext";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
+import { useHaptics } from "../hooks/useHaptics";
 
 interface SettingsScreenProps {
     onClose: () => void;
@@ -29,6 +30,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onClose }) => {
         toggleHaptics,
         clearAllData,
     } = useSettings();
+    const { selection, notificationSuccess } = useHaptics();
 
     const paperTheme = useTheme();
 
@@ -43,6 +45,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onClose }) => {
                     style: "destructive",
                     onPress: () => {
                         clearAllData();
+                        notificationSuccess();
                         Alert.alert("Success", "All data has been cleared.");
                     },
                 },
@@ -59,7 +62,14 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onClose }) => {
         >
             <StatusBar style={theme === "dark" ? "light" : "dark"} />
             <View style={styles.header}>
-                <IconButton icon="arrow-left" size={24} onPress={onClose} />
+                <IconButton
+                    icon="arrow-left"
+                    size={24}
+                    onPress={() => {
+                        selection();
+                        onClose();
+                    }}
+                />
                 <Text variant="headlineSmall" style={styles.title}>
                     Settings
                 </Text>
@@ -68,28 +78,19 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onClose }) => {
             <ScrollView contentContainerStyle={styles.content}>
                 <List.Section>
                     <List.Subheader>Appearance</List.Subheader>
-                    <List.Item
-                        title="Dark Mode"
-                        description="Switch app theme"
-                        left={(props) => (
-                            <List.Icon {...props} icon="theme-light-dark" />
-                        )}
-                        right={() => (
-                            <Switch
-                                value={theme === "dark"}
-                                onValueChange={toggleTheme}
-                            />
-                        )}
-                    />
                     <Divider />
                     <List.Item
-                        title="Dark Map"
-                        description="Switch map style"
+                        title="Dark Mode"
+                        description="Switch to Dark Mode"
                         left={(props) => <List.Icon {...props} icon="map" />}
                         right={() => (
                             <Switch
-                                value={mapStyle === "dark"}
-                                onValueChange={toggleMapStyle}
+                                value={mapStyle === "dark" && theme === "dark"}
+                                onValueChange={() => {
+                                    selection();
+                                    toggleMapStyle();
+                                    toggleTheme();
+                                }}
                             />
                         )}
                     />
@@ -106,7 +107,10 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onClose }) => {
                         right={() => (
                             <Switch
                                 value={audioEnabled}
-                                onValueChange={toggleAudio}
+                                onValueChange={() => {
+                                    selection();
+                                    toggleAudio();
+                                }}
                             />
                         )}
                     />
@@ -120,7 +124,10 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onClose }) => {
                         right={() => (
                             <Switch
                                 value={hapticsEnabled}
-                                onValueChange={toggleHaptics}
+                                onValueChange={() => {
+                                    selection();
+                                    toggleHaptics();
+                                }}
                             />
                         )}
                     />

@@ -2,6 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export const STORAGE_KEYS = {
     ROUTE_HISTORY: "ECHO_MAP_ROUTE_HISTORY",
+    SETTINGS: "ECHO_MAP_SETTINGS",
 };
 
 export const saveToStorage = async <T>(

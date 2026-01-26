@@ -1,9 +1,25 @@
 export const darkMapStyle = [
     {
+        elementType: "polyline",
+        stylers: [
+            {
+                color: "#831da0",
+            },
+        ],
+    },
+    {
         elementType: "geometry",
         stylers: [
             {
-                color: "#242f3e",
+                color: "#212121",
+            },
+        ],
+    },
+    {
+        elementType: "labels.icon",
+        stylers: [
+            {
+                visibility: "off",
             },
         ],
     },
@@ -11,7 +27,7 @@ export const darkMapStyle = [
         elementType: "labels.text.fill",
         stylers: [
             {
-                color: "#746855",
+                color: "#757575",
             },
         ],
     },
@@ -19,7 +35,33 @@ export const darkMapStyle = [
         elementType: "labels.text.stroke",
         stylers: [
             {
-                color: "#242f3e",
+                color: "#212121",
+            },
+        ],
+    },
+    {
+        featureType: "administrative",
+        elementType: "geometry",
+        stylers: [
+            {
+                color: "#757575",
+            },
+        ],
+    },
+    {
+        featureType: "administrative.country",
+        elementType: "labels.text.fill",
+        stylers: [
+            {
+                color: "#9e9e9e",
+            },
+        ],
+    },
+    {
+        featureType: "administrative.land_parcel",
+        stylers: [
+            {
+                visibility: "off",
             },
         ],
     },
@@ -28,7 +70,7 @@ export const darkMapStyle = [
         elementType: "labels.text.fill",
         stylers: [
             {
-                color: "#d59563",
+                color: "#bdbdbd",
             },
         ],
     },
@@ -37,7 +79,7 @@ export const darkMapStyle = [
         elementType: "labels.text.fill",
         stylers: [
             {
-                color: "#d59563",
+                color: "#757575",
             },
         ],
     },
@@ -46,7 +88,7 @@ export const darkMapStyle = [
         elementType: "geometry",
         stylers: [
             {
-                color: "#263c3f",
+                color: "#181818",
             },
         ],
     },
@@ -55,25 +97,25 @@ export const darkMapStyle = [
         elementType: "labels.text.fill",
         stylers: [
             {
-                color: "#6b9a76",
+                color: "#616161",
+            },
+        ],
+    },
+    {
+        featureType: "poi.park",
+        elementType: "labels.text.stroke",
+        stylers: [
+            {
+                color: "#1b1b1b",
             },
         ],
     },
     {
         featureType: "road",
-        elementType: "geometry",
+        elementType: "geometry.fill",
         stylers: [
             {
-                color: "#38414e",
-            },
-        ],
-    },
-    {
-        featureType: "road",
-        elementType: "geometry.stroke",
-        stylers: [
-            {
-                color: "#212a37",
+                color: "#2c2c2c",
             },
         ],
     },
@@ -82,7 +124,16 @@ export const darkMapStyle = [
         elementType: "labels.text.fill",
         stylers: [
             {
-                color: "#9ca5b3",
+                color: "#8a8a8a",
+            },
+        ],
+    },
+    {
+        featureType: "road.arterial",
+        elementType: "geometry",
+        stylers: [
+            {
+                color: "#373737",
             },
         ],
     },
@@ -91,43 +142,34 @@ export const darkMapStyle = [
         elementType: "geometry",
         stylers: [
             {
-                color: "#746855",
+                color: "#3c3c3c",
             },
         ],
     },
     {
-        featureType: "road.highway",
-        elementType: "geometry.stroke",
+        featureType: "road.highway.controlled_access",
+        elementType: "geometry",
         stylers: [
             {
-                color: "#1f2835",
+                color: "#4e4e4e",
             },
         ],
     },
     {
-        featureType: "road.highway",
+        featureType: "road.local",
         elementType: "labels.text.fill",
         stylers: [
             {
-                color: "#f3d19c",
+                color: "#616161",
             },
         ],
     },
     {
         featureType: "transit",
-        elementType: "geometry",
-        stylers: [
-            {
-                color: "#2f3948",
-            },
-        ],
-    },
-    {
-        featureType: "transit.station",
         elementType: "labels.text.fill",
         stylers: [
             {
-                color: "#d59563",
+                color: "#757575",
             },
         ],
     },
@@ -136,7 +178,7 @@ export const darkMapStyle = [
         elementType: "geometry",
         stylers: [
             {
-                color: "#17263c",
+                color: "#000000",
             },
         ],
     },
@@ -145,16 +187,7 @@ export const darkMapStyle = [
         elementType: "labels.text.fill",
         stylers: [
             {
-                color: "#515c6d",
-            },
-        ],
-    },
-    {
-        featureType: "water",
-        elementType: "labels.text.stroke",
-        stylers: [
-            {
-                color: "#17263c",
+                color: "#3d3d3d",
             },
         ],
     },

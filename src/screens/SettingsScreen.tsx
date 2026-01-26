@@ -24,6 +24,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onClose }) => {
         toggleTheme,
         mapStyle,
         toggleMapStyle,
+        setAppTheme,
         audioEnabled,
         toggleAudio,
         hapticsEnabled,
@@ -86,10 +87,9 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onClose }) => {
                         right={() => (
                             <Switch
                                 value={mapStyle === "dark" && theme === "dark"}
-                                onValueChange={() => {
+                                onValueChange={(val) => {
                                     selection();
-                                    toggleMapStyle();
-                                    toggleTheme();
+                                    setAppTheme(val ? "dark" : "light");
                                 }}
                             />
                         )}

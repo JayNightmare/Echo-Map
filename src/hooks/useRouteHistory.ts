@@ -44,11 +44,20 @@ export const useRouteHistory = () => {
         await saveToStorage(STORAGE_KEYS.ROUTE_HISTORY, updatedHistory);
     };
 
+    const updateRouteName = async (id: string, newName: string) => {
+        const updatedHistory = history.map((route) =>
+            route.id === id ? { ...route, name: newName } : route,
+        );
+        setHistory(updatedHistory);
+        await saveToStorage(STORAGE_KEYS.ROUTE_HISTORY, updatedHistory);
+    };
+
     return {
         history,
         isLoading,
         saveRoute,
         deleteRoute,
+        updateRouteName,
         refreshHistory: loadHistory,
     };
 };

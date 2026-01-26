@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { StatusBar } from "expo-status-bar";
+import { useTheme } from "react-native-paper";
 import { AudioNode } from "../types";
 import { AudioPlayer } from "../components/AudioPlayer";
 import { useHaptics } from "../hooks/useHaptics";
@@ -17,12 +18,31 @@ export const ArrivalScreen: React.FC<ArrivalScreenProps> = ({
     onEnd,
 }) => {
     const { selection, impactMedium } = useHaptics();
+    const theme = useTheme();
+
     return (
-        <View style={styles.container}>
-            <StatusBar style="light" />
-            <View style={styles.arrivedContainer}>
+        <View
+            style={[
+                styles.container,
+                { backgroundColor: theme.colors.background },
+            ]}
+        >
+            <StatusBar style={theme.dark ? "light" : "dark"} />
+            <View
+                style={[
+                    styles.arrivedContainer,
+                    { backgroundColor: theme.colors.background },
+                ]}
+            >
                 <Text style={styles.arrivedText}>You have arrived!</Text>
-                <Text style={styles.arrivedSubText}>at {target.title}</Text>
+                <Text
+                    style={[
+                        styles.arrivedSubText,
+                        { color: theme.colors.onBackground },
+                    ]}
+                >
+                    at {target.title}
+                </Text>
 
                 {target.audioUrl ? (
                     <AudioPlayer node={target} onClose={onNext} />
@@ -55,12 +75,11 @@ export const ArrivalScreen: React.FC<ArrivalScreenProps> = ({
 };
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: "#000" },
+    container: { flex: 1 },
     arrivedContainer: {
         flex: 1,
         justifyContent: "center",
         alignItems: "center",
-        backgroundColor: "#000",
         padding: 20,
     },
     arrivedText: {
@@ -69,7 +88,7 @@ const styles = StyleSheet.create({
         fontWeight: "bold",
         marginBottom: 10,
     },
-    arrivedSubText: { color: "#fff", fontSize: 20, marginBottom: 40 },
+    arrivedSubText: { fontSize: 20, marginBottom: 40 },
     nextButton: {
         backgroundColor: "#4CAF50",
         paddingHorizontal: 30,

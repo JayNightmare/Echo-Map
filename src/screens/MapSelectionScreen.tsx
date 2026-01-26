@@ -9,6 +9,7 @@ import {
     FlatList,
     Dimensions,
     Alert,
+    ActivityIndicator,
 } from "react-native";
 import MapView, { Marker, PROVIDER_GOOGLE, Callout } from "react-native-maps";
 import MapViewDirections from "react-native-maps-directions";
@@ -43,6 +44,7 @@ import Animated, {
     Extrapolation,
 } from "react-native-reanimated";
 import { useHaptics } from "../hooks/useHaptics";
+import ListIcon from "react-native-paper/lib/typescript/components/List/ListIcon";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -81,7 +83,8 @@ export const MapSelectionScreen: React.FC<MapSelectionScreenProps> = ({
     onUpdateNode,
 }) => {
     const { mapStyle } = useSettings();
-    const { history, saveRoute, deleteRoute, isLoading } = useRouteHistory();
+    const { history, saveRoute, deleteRoute, updateRouteName, isLoading } =
+        useRouteHistory();
     const { selection, impactMedium, notificationSuccess } = useHaptics();
 
     // State
@@ -96,10 +99,19 @@ export const MapSelectionScreen: React.FC<MapSelectionScreenProps> = ({
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const menuAnimation = useSharedValue(0);
 
+    // Map Loading State
+    const [isMapReady, setIsMapReady] = useState(false);
+
     // Renaming
     const [renameDialogVisible, setRenameDialogVisible] = useState(false);
     const [renamingIndex, setRenamingIndex] = useState<number | null>(null);
     const [newName, setNewName] = useState("");
+
+    // Route Renaming
+    const [routeRenameDialogVisible, setRouteRenameDialogVisible] =
+        useState(false);
+    const [renamingRoute, setRenamingRoute] = useState<SavedRoute | null>(null);
+    const [newRouteName, setNewRouteName] = useState("");
 
     const mapRef = useRef<MapView>(null);
 
@@ -209,7 +221,18 @@ export const MapSelectionScreen: React.FC<MapSelectionScreenProps> = ({
             const data = await response.json();
 
             if (data.places && data.places.length > 0) {
-                setSearchResults(data.places);
+                const sortedPlaces = data.places
+                    .map((place: any) => {
+                        const dist = getDistanceFromLatLonInKm(
+                            userLocation.latitude,
+                            userLocation.longitude,
+                            place.location.latitude,
+                            place.location.longitude,
+                        );
+                        return { ...place, distance: dist };
+                    })
+                    .sort((a: any, b: any) => a.distance - b.distance);
+                setSearchResults(sortedPlaces);
             } else {
                 setSearchResults([]);
                 console.warn("No places found");
@@ -343,15 +366,26 @@ export const MapSelectionScreen: React.FC<MapSelectionScreenProps> = ({
         setIsHistoryVisible(false);
     };
 
+    const renameRoute = (route: SavedRoute) => {
+        setRenamingRoute(route);
+        setNewRouteName(route.name);
+        setRouteRenameDialogVisible(true);
+    };
+
+    const confirmRouteRename = () => {
+        if (renamingRoute) {
+            updateRouteName(renamingRoute.id, newRouteName);
+            selection();
+        }
+        setRouteRenameDialogVisible(false);
+        setRenamingRoute(null);
+        setNewRouteName("");
+    };
+
     // --- Render Helpers ---
 
     const renderSearchResultItem = ({ item }: { item: any }) => {
-        const distance = getDistanceFromLatLonInKm(
-            userLocation.latitude,
-            userLocation.longitude,
-            item.location.latitude,
-            item.location.longitude,
-        ).toFixed(1);
+        const distance = item.distance.toFixed(1);
 
         const textColor = mapStyle === "dark" ? "#fff" : "#000";
         const subTextColor = mapStyle === "dark" ? "#ccc" : "#666";
@@ -653,7 +687,7 @@ export const MapSelectionScreen: React.FC<MapSelectionScreenProps> = ({
             <MapView
                 ref={mapRef}
                 provider={PROVIDER_GOOGLE}
-                style={styles.map}
+                style={[styles.map, { opacity: isMapReady ? 1 : 0 }]}
                 initialRegion={{
                     latitude: userLocation.latitude,
                     longitude: userLocation.longitude,
@@ -665,6 +699,9 @@ export const MapSelectionScreen: React.FC<MapSelectionScreenProps> = ({
                 showsUserLocation
                 showsMyLocationButton
                 onLongPress={handleMapLongPress}
+                onMapReady={() => {
+                    setTimeout(() => setIsMapReady(true), 500);
+                }}
             >
                 {activeRoute.map((node, index) => (
                     <Marker
@@ -673,33 +710,14 @@ export const MapSelectionScreen: React.FC<MapSelectionScreenProps> = ({
                             latitude: node.latitude,
                             longitude: node.longitude,
                         }}
-                        title={`${index + 1}. ${node.title}`}
+                        title={node.title}
+                        onCalloutPress={() => {
+                            selection();
+                            startRenaming(index);
+                        }}
                         pinColor="green"
                     />
                 ))}
-
-                {temporaryPin && (
-                    <Marker
-                        coordinate={{
-                            latitude: temporaryPin.latitude,
-                            longitude: temporaryPin.longitude,
-                        }}
-                        title={temporaryPin.title}
-                        pinColor="orange"
-                    >
-                        <Callout onPress={() => handleAddToRoute(temporaryPin)}>
-                            <View style={styles.callout}>
-                                <Text style={styles.calloutTitle}>
-                                    {temporaryPin.title}
-                                </Text>
-                                <Text style={styles.calloutBtn}>
-                                    + Add to Route
-                                </Text>
-                            </View>
-                        </Callout>
-                    </Marker>
-                )}
-
                 {activeRoute.length > 0 && (
                     <MapViewDirections
                         origin={{
@@ -717,12 +735,39 @@ export const MapSelectionScreen: React.FC<MapSelectionScreenProps> = ({
                             longitude: n.longitude,
                         }))}
                         apikey={GOOGLE_MAPS_API_KEY}
-                        strokeWidth={3}
-                        strokeColor="#4CAF50"
+                        strokeWidth={6}
+                        strokeColors={[
+                            "#00ff047a",
+                            "rgba(153, 122, 0, 1)",
+                            "#900000ff",
+                        ]}
                         mode="WALKING"
+                        precision="high"
+                        optimizeWaypoints={true}
                     />
                 )}
             </MapView>
+
+            {/* Map Loading Overlay */}
+            {!isMapReady && (
+                <View
+                    style={[
+                        StyleSheet.absoluteFill,
+                        {
+                            backgroundColor:
+                                mapStyle === "dark" ? "#000" : "#fff",
+                            justifyContent: "center",
+                            alignItems: "center",
+                            zIndex: 5, // Below topBar (100) but above map
+                        },
+                    ]}
+                >
+                    <ActivityIndicator
+                        size="large"
+                        color={mapStyle === "dark" ? "#4CAF50" : "#2196F3"}
+                    />
+                </View>
+            )}
 
             {/* Floating Save Button */}
             {activeRoute.length > 0 && (
@@ -748,6 +793,7 @@ export const MapSelectionScreen: React.FC<MapSelectionScreenProps> = ({
                         backgroundColor: mapStyle === "dark" ? "#222" : "#fff",
                         height: isEditing ? "50%" : "auto",
                         maxHeight: isEditing ? "50%" : "100%",
+                        // marginBottom: 1000,
                     },
                 ]}
             >
@@ -887,6 +933,11 @@ export const MapSelectionScreen: React.FC<MapSelectionScreenProps> = ({
                                                 ? "#ccc"
                                                 : "#666",
                                     }}
+                                    onPress={() => {
+                                        selection();
+                                        loadRoute(item);
+                                        setIsHistoryVisible(false);
+                                    }}
                                     left={(props) => (
                                         <List.Icon
                                             {...props}
@@ -909,7 +960,9 @@ export const MapSelectionScreen: React.FC<MapSelectionScreenProps> = ({
                                         >
                                             <Button
                                                 mode="contained"
-                                                onPress={() => loadRoute(item)}
+                                                onPress={() =>
+                                                    renameRoute(item)
+                                                }
                                                 style={{ marginLeft: 10 }}
                                                 buttonColor={
                                                     mapStyle === "dark"
@@ -918,7 +971,7 @@ export const MapSelectionScreen: React.FC<MapSelectionScreenProps> = ({
                                                 }
                                             >
                                                 <List.Icon
-                                                    icon="map-marker-path"
+                                                    icon="pencil"
                                                     color={
                                                         mapStyle === "dark"
                                                             ? "#fff"
@@ -991,6 +1044,43 @@ export const MapSelectionScreen: React.FC<MapSelectionScreenProps> = ({
                             Cancel
                         </Button>
                         <Button onPress={confirmRename}>Save</Button>
+                    </Dialog.Actions>
+                </Dialog>
+            </Portal>
+
+            {/* Route Rename Dialog */}
+            <Portal>
+                <Dialog
+                    visible={routeRenameDialogVisible}
+                    onDismiss={() => setRouteRenameDialogVisible(false)}
+                    style={{
+                        backgroundColor: mapStyle === "dark" ? "#333" : "#fff",
+                    }}
+                >
+                    <Dialog.Title
+                        style={{ color: mapStyle === "dark" ? "#fff" : "#000" }}
+                    >
+                        Rename Route
+                    </Dialog.Title>
+                    <Dialog.Content>
+                        <TextInput
+                            label="Route Name"
+                            value={newRouteName}
+                            onChangeText={setNewRouteName}
+                            style={{
+                                backgroundColor:
+                                    mapStyle === "dark" ? "#444" : "#fff",
+                            }}
+                            textColor={mapStyle === "dark" ? "#fff" : "#000"}
+                        />
+                    </Dialog.Content>
+                    <Dialog.Actions>
+                        <Button
+                            onPress={() => setRouteRenameDialogVisible(false)}
+                        >
+                            Cancel
+                        </Button>
+                        <Button onPress={confirmRouteRename}>Save</Button>
                     </Dialog.Actions>
                 </Dialog>
             </Portal>

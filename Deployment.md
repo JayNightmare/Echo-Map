@@ -47,7 +47,8 @@ cd ..
  * On your phone, go to Settings > General > VPN & Device Management.
  * Tap your email address under "Developer App".
  * Tap Trust.
-🤖 Android (APK Generation)
+
+## 🤖 Android (APK Generation)
 You can use EAS to build a standalone APK without a paid Google Play account.
 
 ### Option A: EAS (Cloud Build - Recommended)

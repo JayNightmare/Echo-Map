@@ -61,13 +61,14 @@ You can use EAS to build a standalone APK without a paid Google Play account.
 ```json
 {
    {
-  "build": {
-    "preview": {
-      "android": {
-        "buildType": "apk"
+      "build": {
+         "preview": {
+            "android": {
+               "buildType": "apk" 
+            }
+         }
       }
-    }
-  }
+   }
 }
 ```
 

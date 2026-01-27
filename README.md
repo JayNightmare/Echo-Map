@@ -147,12 +147,6 @@ The app requires specific audio assets in `src/assets/sounds/`:
 - `arrived.mp3` (Target reached)
 - `cancel.mp3` (Navigation cancelled)
 
-The app uses mock data in `data/audioNodes.json`. You can:
-
-- Add more audio nodes with latitude, longitude, title, and audioUrl
-- Change audio URLs to point to your own content
-- Adjust arrival threshold and heading tolerance in `App.tsx`
-
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

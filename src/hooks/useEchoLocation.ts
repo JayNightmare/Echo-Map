@@ -9,7 +9,7 @@ export const useEchoLocation = () => {
 
     const locationSubscriptionRef =
         useRef<Location.LocationSubscription | null>(null);
-    const magnetometerSubscriptionRef = useRef<{ remove: () => void } | null>(
+    const headingSubscriptionRef = useRef<Location.LocationSubscription | null>(
         null,
     );
 
@@ -40,27 +40,26 @@ export const useEchoLocation = () => {
                 },
             );
 
-            magnetometerSubscriptionRef.current = Magnetometer.addListener(
-                (data) => {
-                    const { x, y } = data;
-                    let heading = (Math.atan2(y, x) * 180) / Math.PI;
-                    heading = (heading + 360) % 360;
-
+            headingSubscriptionRef.current = await Location.watchHeadingAsync(
+                (newHeading) => {
                     setUserLocation((prev) => {
                         if (!prev) return null;
+                        // use trueHeading if available, otherwise magHeading
+                        const heading =
+                            newHeading.trueHeading >= 0
+                                ? newHeading.trueHeading
+                                : newHeading.magHeading;
                         return { ...prev, heading };
                     });
                 },
             );
-
-            Magnetometer.setUpdateInterval(100);
         })();
 
         return () => {
             if (locationSubscriptionRef.current)
                 locationSubscriptionRef.current.remove();
-            if (magnetometerSubscriptionRef.current)
-                magnetometerSubscriptionRef.current.remove();
+            if (headingSubscriptionRef.current)
+                headingSubscriptionRef.current.remove();
         };
     }, []);
 

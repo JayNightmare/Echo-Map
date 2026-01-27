@@ -10,8 +10,6 @@ import { MapSelectionScreen } from "./screens/MapSelectionScreen";
 import { NavigationScreen } from "./screens/NavigationScreen";
 import { ArrivalScreen } from "./screens/ArrivalScreen";
 
-// import audioNodesData from "./data/audioNodes.json";
-
 import { SettingsProvider, useSettings } from "./context/SettingsContext";
 import { SettingsScreen } from "./screens/SettingsScreen";
 import { MD3DarkTheme, MD3LightTheme } from "react-native-paper";
@@ -35,6 +33,7 @@ function AppContent() {
         setRoute,
         updateRoute,
         updateNode,
+        markAsArrived,
     } = useEchoNavigation({
         userLocation,
         isStarted,
@@ -102,9 +101,12 @@ function AppContent() {
                     <NavigationScreen
                         target={navState.activeTarget}
                         distance={navState.distance}
+                        headingDelta={navState.headingDelta}
+                        isApproaching={navState.isApproaching}
                         routeIndex={navState.currentTargetIndex}
                         routeTotal={navState.activeRoute.length}
                         onCancel={handleClearNavigation}
+                        onArrived={markAsArrived}
                     />
                 );
             }
@@ -184,9 +186,11 @@ function AppContentWithClearTrigger({
         startRoute,
         proceedToNextTarget,
         clearNavigation: hookClearNavigation,
+        cancelNavigation: hookCancelNavigation,
         setRoute,
         updateRoute,
         updateNode,
+        markAsArrived,
     } = useEchoNavigation({
         userLocation,
         isStarted,
@@ -215,6 +219,12 @@ function AppContentWithClearTrigger({
         hookClearNavigation();
         setIsStarted(false);
         setIsSelectingLocation(true); // Go back to selection map
+    };
+
+    const handleCancelNavigation = () => {
+        hookCancelNavigation();
+        setIsStarted(false);
+        setIsSelectingLocation(true);
     };
 
     // Render Logic
@@ -265,9 +275,12 @@ function AppContentWithClearTrigger({
                     <NavigationScreen
                         target={navState.activeTarget}
                         distance={navState.distance}
+                        headingDelta={navState.headingDelta}
+                        isApproaching={navState.isApproaching}
                         routeIndex={navState.currentTargetIndex}
                         routeTotal={navState.activeRoute.length}
-                        onCancel={handleClearNavigation}
+                        onCancel={handleCancelNavigation}
+                        onArrived={markAsArrived}
                     />
                 );
             }

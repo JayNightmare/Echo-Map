@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Alert } from "react-native";
 import * as Haptics from "expo-haptics";
+import { useAudioPlayer } from "expo-audio";
 import { AudioNode, NavigationState, UserLocation } from "../types";
 import {
     calculateDistance,
@@ -8,11 +9,13 @@ import {
     calculateBearingDelta,
     getHapticParams,
 } from "../utils/geolocation";
+import { useAppSounds } from "./useAppSounds";
 
-import { useSettings } from "../context/SettingsContext"; // Added import
+import { useSettings } from "../context/SettingsContext";
 
-const ARRIVAL_THRESHOLD = 10; // meters
+const ARRIVAL_THRESHOLD = 80; // meters
 const HEADING_TOLERANCE = 15; // degrees
+const AUTO_ARRIVAL_TIME = 3 * 60 * 1000; // 3 minutes in milliseconds
 
 interface UseEchoNavigationProps {
     userLocation: UserLocation | null;
@@ -31,12 +34,19 @@ export const useEchoNavigation = ({
         bearing: null,
         headingDelta: null,
         isArrived: false,
+        isApproaching: false,
     });
 
     const [isOnTrack, setIsOnTrack] = useState(false);
     const hapticIntervalRef = useRef<NodeJS.Timeout | null>(null);
+    const approachTimerRef = useRef<NodeJS.Timeout | null>(null);
+    const prevDistanceRef = useRef<number | null>(null);
 
     // Update navigation metrics
+    const { hapticsEnabled, audioEnabled } = useSettings();
+    const { milestonePlayer, startPlayer, arrivedPlayer, cancelledPlayer } =
+        useAppSounds();
+
     useEffect(() => {
         if (!userLocation || !state.activeTarget) {
             setState((prev) => ({
@@ -45,7 +55,14 @@ export const useEchoNavigation = ({
                 bearing: null,
                 headingDelta: null,
                 isArrived: false,
+                isApproaching: false,
             }));
+            // Clear timer if we stop navigating
+            if (approachTimerRef.current) {
+                clearTimeout(approachTimerRef.current);
+                approachTimerRef.current = null;
+            }
+            prevDistanceRef.current = null;
             return;
         }
 
@@ -69,19 +86,55 @@ export const useEchoNavigation = ({
                 ? calculateBearingDelta(userLocation.heading, bearing)
                 : null;
 
-        const isArrived = distance < ARRIVAL_THRESHOLD;
+        const isApproaching = distance < ARRIVAL_THRESHOLD;
+
+        // If we are approaching, start the timer if not already started
+        if (isApproaching && !approachTimerRef.current && !state.isArrived) {
+            approachTimerRef.current = setTimeout(() => {
+                markAsArrived();
+            }, AUTO_ARRIVAL_TIME);
+        } else if (!isApproaching && approachTimerRef.current) {
+            // If we leave the radius, clear the timer
+            clearTimeout(approachTimerRef.current);
+            approachTimerRef.current = null;
+        }
+
+        // Audio Triggers for Milestones
+        if (audioEnabled && prevDistanceRef.current !== null && isOnTrack) {
+            const prevDist = prevDistanceRef.current;
+            const currDist = distance;
+
+            // Milestones: 500, 150, 80
+            const milestones = [500, 150, 80];
+
+            for (const milestone of milestones) {
+                // Check if we just crossed the milestone (was above, now below or equal)
+                if (prevDist > milestone && currDist <= milestone) {
+                    milestonePlayer.play();
+                    break; // Play only one sound per update if multiple crossed (unlikely but safe)
+                }
+            }
+        }
+
+        prevDistanceRef.current = distance;
 
         setState((prev) => ({
             ...prev,
             distance,
             bearing,
             headingDelta,
-            isArrived,
+            isApproaching,
+            isArrived: prev.isArrived,
         }));
-    }, [userLocation, state.activeTarget]);
+    }, [
+        userLocation,
+        state.activeTarget,
+        audioEnabled,
+        isOnTrack,
+        milestonePlayer,
+    ]);
 
     // Haptics & Feedback
-    const { hapticsEnabled } = useSettings();
 
     useEffect(() => {
         if (!state.activeTarget || state.isArrived || !isStarted) {
@@ -176,11 +229,15 @@ export const useEchoNavigation = ({
             return false;
         }
 
+        startPlayer.seekTo(0);
+        startPlayer.play();
+
         setState((prev) => ({
             ...prev,
             activeTarget: prev.activeRoute[0],
             currentTargetIndex: 0,
             isArrived: false,
+            isApproaching: false,
         }));
         return true;
     };
@@ -193,11 +250,21 @@ export const useEchoNavigation = ({
                 activeTarget: prev.activeRoute[nextIndex],
                 currentTargetIndex: nextIndex,
                 isArrived: false,
+                isApproaching: false,
                 distance: null,
             }));
+
+            // Clear timer for next target
+            if (approachTimerRef.current) {
+                clearTimeout(approachTimerRef.current);
+                approachTimerRef.current = null;
+            }
+
             return true;
         } else {
             Alert.alert("Route Complete", "You have visited all locations!");
+            arrivedPlayer.seekTo(0);
+            arrivedPlayer.play();
             clearNavigation();
             return false;
         }
@@ -212,7 +279,18 @@ export const useEchoNavigation = ({
             bearing: null,
             headingDelta: null,
             isArrived: false,
+            isApproaching: false,
         });
+        if (approachTimerRef.current) {
+            clearTimeout(approachTimerRef.current);
+            approachTimerRef.current = null;
+        }
+    };
+
+    const cancelNavigation = () => {
+        cancelledPlayer.seekTo(0);
+        cancelledPlayer.play();
+        clearNavigation();
     };
 
     const setRoute = (route: AudioNode[]) => {
@@ -225,6 +303,7 @@ export const useEchoNavigation = ({
             bearing: null,
             headingDelta: null,
             isArrived: false,
+            isApproaching: false,
         }));
     };
 
@@ -248,6 +327,19 @@ export const useEchoNavigation = ({
         });
     };
 
+    const markAsArrived = () => {
+        setState((prev) => ({
+            ...prev,
+            isArrived: true,
+        }));
+        arrivedPlayer.seekTo(0);
+        arrivedPlayer.play();
+        if (approachTimerRef.current) {
+            clearTimeout(approachTimerRef.current);
+            approachTimerRef.current = null;
+        }
+    };
+
     return {
         state,
         isOnTrack,
@@ -255,8 +347,10 @@ export const useEchoNavigation = ({
         startRoute,
         proceedToNextTarget,
         clearNavigation,
+        cancelNavigation,
         setRoute,
         updateRoute,
         updateNode,
+        markAsArrived,
     };
 };

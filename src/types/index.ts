@@ -20,6 +20,7 @@ export interface NavigationState {
     bearing: number | null;
     headingDelta: number | null;
     isArrived: boolean;
+    isApproaching: boolean;
 }
 
 export interface MapSelectionScreenProps {

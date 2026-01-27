@@ -7,17 +7,24 @@ import Animated, {
     withTiming,
     withSequence,
     Easing,
-    interpolateColor,
 } from "react-native-reanimated";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import { useTheme } from "react-native-paper";
 
 interface NavigationOrbProps {
     distance: number; // meters
+    headingDelta: number | null;
 }
 
-export const NavigationOrb: React.FC<NavigationOrbProps> = ({ distance }) => {
+export const NavigationOrb: React.FC<NavigationOrbProps> = ({
+    distance,
+    headingDelta,
+}) => {
+    const theme = useTheme();
     // Shared values for animation
     const scale = useSharedValue(1);
     const opacity = useSharedValue(0.3);
+    const rotation = useSharedValue(0);
 
     // Determine pulse speed and color based on distance
     // < 10m: VERY HOT (Fast, Red)
@@ -25,9 +32,9 @@ export const NavigationOrb: React.FC<NavigationOrbProps> = ({ distance }) => {
     // > 50m: COLD (Slow, Blue)
 
     const getPulseConfig = (d: number) => {
-        if (d < 10) return { duration: 500, color: "#FF3B30" }; // Red
-        if (d < 50) return { duration: 1000, color: "#FFCC00" }; // Yellow
-        return { duration: 2000, color: "#007AFF" }; // Blue
+        if (d < 10) return { duration: 500, color: theme.colors.error }; // Red-ish from theme or custom
+        if (d < 80) return { duration: 1000, color: theme.colors.tertiary }; // Yellow-ish
+        return { duration: 2000, color: theme.colors.primary }; // Blue-ish
     };
 
     const { duration, color } = getPulseConfig(distance);
@@ -51,32 +58,72 @@ export const NavigationOrb: React.FC<NavigationOrbProps> = ({ distance }) => {
             -1,
             false,
         );
-    }, [distance]);
+    }, [distance, color, duration]);
+
+    useEffect(() => {
+        if (headingDelta !== null) {
+            rotation.value = withTiming(headingDelta, { duration: 300 });
+        }
+    }, [headingDelta]);
 
     const animatedStyle = useAnimatedStyle(() => {
         return {
             transform: [{ scale: scale.value }],
             opacity: opacity.value,
-            backgroundColor: color, // Direct color assignment for simplicity or use interpolateColor if needed
+            backgroundColor: color,
+        };
+    });
+
+    const arrowAnimatedStyle = useAnimatedStyle(() => {
+        return {
+            transform: [{ rotate: `${rotation.value}deg` }],
         };
     });
 
     const centerCircleStyle = {
         backgroundColor: color,
+        borderColor: theme.colors.background,
+        borderWidth: 2,
+    };
+
+    const formatDistance = (d: number) => {
+        if (d >= 900) {
+            return `${(d / 1000).toFixed(1)} km`;
+        }
+        return `${Math.round(d)} m`;
     };
 
     return (
         <View style={styles.container}>
-            {/* Pulsing Ring */}
-            <Animated.View style={[styles.pulseRing, animatedStyle]} />
+            <Text
+                style={[
+                    styles.distanceText,
+                    { color: theme.colors.onBackground },
+                ]}
+            >
+                {formatDistance(distance)}
+            </Text>
 
-            {/* Center Anchor */}
-            <View style={[styles.centerCircle, centerCircleStyle]}>
-                <Text style={styles.distanceText}>{Math.round(distance)}m</Text>
+            <View style={styles.orbContainer}>
+                {/* Pulsing Ring */}
+                <Animated.View style={[styles.pulseRing, animatedStyle]} />
+
+                {/* Center Anchor */}
+                <View style={[styles.centerCircle, centerCircleStyle]}>
+                    {headingDelta !== null && (
+                        <Animated.View style={arrowAnimatedStyle}>
+                            <MaterialCommunityIcons
+                                name="arrow-up"
+                                size={32}
+                                color={theme.colors.background} // Contrast with the circle color
+                            />
+                        </Animated.View>
+                    )}
+                </View>
             </View>
 
-            <Text style={styles.statusText}>
-                {distance < 10 ? "You're close!" : "Keep walking..."}
+            <Text style={[styles.statusText, { color: theme.colors.outline }]}>
+                {distance < 10 ? "You're close!" : "Keep moving..."}
             </Text>
         </View>
     );
@@ -87,7 +134,19 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: "center",
         alignItems: "center",
-        backgroundColor: "#000",
+    },
+    distanceText: {
+        fontSize: 48,
+        fontWeight: "bold",
+        marginBottom: 40,
+        fontVariant: ["tabular-nums"],
+    },
+    orbContainer: {
+        width: 100,
+        height: 100,
+        justifyContent: "center",
+        alignItems: "center",
+        marginBottom: 40,
     },
     pulseRing: {
         width: 100,
@@ -111,17 +170,10 @@ const styles = StyleSheet.create({
         shadowRadius: 3.84,
         elevation: 5,
     },
-    distanceText: {
-        color: "#fff",
-        fontWeight: "bold",
-        fontSize: 16,
-    },
     statusText: {
-        marginTop: 150,
-        color: "#fff",
-        fontSize: 24,
-        fontWeight: "300",
-        letterSpacing: 2,
+        fontSize: 18,
+        fontWeight: "500",
+        letterSpacing: 1,
         textTransform: "uppercase",
     },
 });

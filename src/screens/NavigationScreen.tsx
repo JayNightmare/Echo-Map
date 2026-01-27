@@ -9,19 +9,25 @@ import { useHaptics } from "../hooks/useHaptics";
 interface NavigationScreenProps {
     target: AudioNode;
     distance: number;
+    headingDelta: number | null;
+    isApproaching: boolean;
     routeIndex: number;
     routeTotal: number;
     onCancel: () => void;
+    onArrived: () => void;
 }
 
 export const NavigationScreen: React.FC<NavigationScreenProps> = ({
     target,
     distance,
+    headingDelta,
+    isApproaching,
     routeIndex,
     routeTotal,
     onCancel,
+    onArrived,
 }) => {
-    const { impactMedium } = useHaptics();
+    const { impactMedium, notificationSuccess: success } = useHaptics();
     const theme = useTheme();
 
     return (
@@ -32,26 +38,49 @@ export const NavigationScreen: React.FC<NavigationScreenProps> = ({
             ]}
         >
             <StatusBar style={theme.dark ? "light" : "dark"} />
-            <NavigationOrb distance={distance} />
+            <NavigationOrb distance={distance} headingDelta={headingDelta} />
 
-            <View style={styles.routeInfo}>
+            <View style={styles.routeHeader}>
                 <Text
                     style={[
                         styles.routeText,
                         { color: theme.colors.onSurfaceVariant },
                     ]}
                 >
-                    Target {routeIndex + 1} of {routeTotal}:
+                    Target {routeIndex + 1} of {routeTotal}
                 </Text>
                 <Text
                     style={[
                         styles.targetTitle,
                         { color: theme.colors.onBackground },
                     ]}
+                    numberOfLines={2}
                 >
                     {target.title}
                 </Text>
             </View>
+
+            {isApproaching && (
+                <TouchableOpacity
+                    style={[
+                        styles.arrivedButton,
+                        { backgroundColor: theme.colors.primary },
+                    ]}
+                    onPress={() => {
+                        success();
+                        onArrived();
+                    }}
+                >
+                    <Text
+                        style={[
+                            styles.arrivedButtonText,
+                            { color: theme.colors.onPrimary },
+                        ]}
+                    >
+                        Arrived Yet?
+                    </Text>
+                </TouchableOpacity>
+            )}
 
             <TouchableOpacity
                 style={[
@@ -69,7 +98,7 @@ export const NavigationScreen: React.FC<NavigationScreenProps> = ({
                         { color: theme.colors.onSurface },
                     ]}
                 >
-                    Cancel
+                    Cancel Trip
                 </Text>
             </TouchableOpacity>
         </View>
@@ -78,26 +107,46 @@ export const NavigationScreen: React.FC<NavigationScreenProps> = ({
 
 const styles = StyleSheet.create({
     container: { flex: 1 },
-    routeInfo: {
+    routeHeader: {
         position: "absolute",
         top: 60,
         left: 20,
         right: 20,
         alignItems: "center",
     },
-    routeText: { fontSize: 14 },
+    routeText: {
+        fontSize: 14,
+        fontWeight: "600",
+        textTransform: "uppercase",
+        letterSpacing: 1,
+    },
     targetTitle: {
-        fontSize: 24,
+        fontSize: 28,
         fontWeight: "bold",
         marginTop: 5,
+        textAlign: "center",
     },
+    arrivedButton: {
+        position: "absolute",
+        bottom: 100,
+        alignSelf: "center",
+        paddingHorizontal: 40,
+        paddingVertical: 18,
+        borderRadius: 30,
+        elevation: 4,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
+    },
+    arrivedButtonText: { fontSize: 18, fontWeight: "bold" },
     cancelButton: {
         position: "absolute",
         bottom: 30,
         alignSelf: "center",
         paddingHorizontal: 30,
-        paddingVertical: 15,
+        paddingVertical: 12,
         borderRadius: 10,
     },
-    cancelButtonText: { fontSize: 16, fontWeight: "bold" },
+    cancelButtonText: { fontSize: 16, fontWeight: "500" },
 });

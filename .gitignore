@@ -176,3 +176,6 @@ ios/build/
 *.bak
 *.swp
 *~
+
+# Markdownlint
+.markdownlint.json

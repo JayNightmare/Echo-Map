@@ -27,23 +27,26 @@ EchoMap is a location-based experience where users navigate the real world to fi
 ### Installation
 
 1. Clone the repository:
+
 ```bash
 git clone https://github.com/JayNightmare/Echo-Map.git
 cd Echo-Map
 ```
 
-2. Install dependencies:
+1. Install dependencies:
+
 ```bash
 npm install
 ```
 
-3. Configure Google Maps API:
-   - Get an API key from [Google Cloud Console](https://console.cloud.google.com/)
-   - Open `app.json` and replace `YOUR_GOOGLE_MAPS_API_KEY_HERE` with your actual API key
+1. Configure Google Maps API:
+    - Get an API key from [Google Cloud Console](https://console.cloud.google.com/)
+    - Duplicate `.env.example`, rename it to `.env` and replace `YOUR_GOOGLE_MAPS_API_KEY_HERE` with your actual API key
 
 ### Running the App
 
 Start the development server:
+
 ```bash
 npm start
 ```
@@ -93,46 +96,59 @@ Echo-Map/
 3. **Select a Target**: Tap any audio node marker to set it as your active target
 4. **Follow the Compass**: A compass overlay shows you which direction to walk
 5. **Use Feedback Cues**:
-   - **Haptic Vibrations**: Get stronger and more frequent as you get closer
-   - **On-Track Indicator**: Shows when you're pointing in the right direction
-6. **Arrive & Play**: When within 10 meters, the audio player unlocks automatically
+    - **Haptic Vibrations**: Get stronger and more frequent as you get closer
+    - **On-Track Indicator**: Shows when you're pointing in the right direction
+6. **Arrive**: When within 80 meters, you will be prompted if you've arrived. If it isn't pressed within 3 minutes, it will automatically mark as arrived.
 
-## 🛠 Technologies
+## ⚙️ Tech Stack
 
 - **React Native**: Framework for building native apps
+    - v19.1.0
 - **Expo**: Platform for universal native apps
+    - v54.0.0
 - **TypeScript**: Type-safe development
+    - v5.9.3
 - **react-native-maps**: Google Maps integration
+    - v1.20.1
 - **expo-location**: GPS tracking
+    - v14.0.0
 - **expo-sensors**: Magnetometer for compass
+    - v14.0.0
 - **expo-haptics**: Vibration feedback
+    - v14.0.0
 - **expo-av**: Audio playback
+    - v14.0.0
 
 ## 🎯 Technical Features
 
 ### Navigation Logic
+
 - Real-time distance calculation using Haversine formula
 - Bearing calculation between coordinates
 - Heading delta for directional feedback
 
 ### Hot/Cold Feedback System
-- **Distance-based haptics**: Intensity and frequency increase as you approach
-  - Far (>100m): Heavy vibration every 5 seconds
-  - Medium (50-100m): Medium vibration every 3 seconds
-  - Close (<50m): Light vibration every 1-2 seconds
-  - Very Close (<10m): Arrival state triggered
-- **Directional audio**: Sonar ping plays when pointing within ±15° of target
 
-### Acceptance Criteria
-✅ Compiles and runs in Expo Go on physical devices
-✅ Google Maps loads with user location
-✅ Pointing phone at target triggers feedback
-✅ Walking toward target changes vibration patterns
-✅ Arriving at target enables audio playback
+- **Distance-based haptics**: Intensity and frequency increase as you approach
+    - Far (>500m): Light vibration every 5 seconds
+    - Medium (151-500m): Medium vibration every 2 seconds
+    - Close (81-150m): Medium vibration every 1 second
+    - Very Close (<=80m): Heavy vibration every 0.5 seconds
+- **Audio Triggers**:
+    - **Milestones**: Sound plays at 500m, 150m, and 80m when heading is correct.
+    - **Events**: Sounds play on Start, Arrival, and Cancel.
 
 ## 📝 Configuration
 
+The app requires specific audio assets in `src/assets/sounds/`:
+
+- `milestone.mp3` (Milestone trigger)
+- `start.mp3` (Navigation start)
+- `arrived.mp3` (Target reached)
+- `cancel.mp3` (Navigation cancelled)
+
 The app uses mock data in `data/audioNodes.json`. You can:
+
 - Add more audio nodes with latitude, longitude, title, and audioUrl
 - Change audio URLs to point to your own content
 - Adjust arrival threshold and heading tolerance in `App.tsx`

@@ -165,6 +165,7 @@ android/build/
 *.perspectivev3
 *.xcuserstate
 *.xcworkspace/
+*.xcodeproj
 !default.xcworkspace
 *.xcscmblueprint
 *.xccheckout
@@ -179,3 +180,7 @@ ios/build/
 
 # Markdownlint
 .markdownlint.json
+
+Build*.txt
+
+android/

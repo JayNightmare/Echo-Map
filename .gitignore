@@ -164,7 +164,6 @@ android/build/
 *.mode2v3
 *.perspectivev3
 *.xcuserstate
-*.xcworkspace/
 *.xcodeproj
 !default.xcworkspace
 *.xcscmblueprint

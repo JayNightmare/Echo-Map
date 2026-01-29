@@ -23,7 +23,10 @@ npm install -g eas-cli
 
 - Configure EAS:
   If you haven't initialized EAS yet:
-  eas build:configure
+
+```bash
+eas build:configure
+```
 
      Select android when prompted.
 

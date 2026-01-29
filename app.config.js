@@ -1,4 +1,5 @@
 import "dotenv/config";
+import { GOOGLE_MAPS_API_KEY } from "./src/config/config";
 
 export default {
         expo: {
@@ -20,6 +21,9 @@ export default {
                                         "EchoMap needs your location to guide you to audio nodes and show your position on the map.",
                                 NSLocationAlwaysAndWhenInUseUsageDescription:
                                         "EchoMap needs your location to guide you to audio nodes even when the app is in the background.",
+                                GOOGLE_MAPS_API_KEY:
+                                        process.env
+                                                .EXPO_PUBLIC_GOOGLE_MAPS_API_KEY,
                         },
                         config: {
                                 googleMapsApiKey:
@@ -63,5 +67,9 @@ export default {
                         "expo-audio",
                         "expo-video",
                 ],
+                extra: {
+                        googleMapsApiKey:
+                                process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY,
+                },
         },
 };

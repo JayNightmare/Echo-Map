@@ -27,7 +27,8 @@
         "terminal.ansiMagenta": "#B45BCF",
         "terminal.ansiRed": "#EA51B2",
         "terminal.ansiWhite": "#E9E9F4",
-        "terminal.ansiYellow": "#00F769"
+        "terminal.ansiYellow": "#00F769",
+        "statusBar.background": "#000000"
     },
     "markdown.validate.enabled": false
 }
